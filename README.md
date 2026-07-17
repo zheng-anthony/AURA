@@ -62,14 +62,3 @@ Our Negative Sampling strategy successfully taught the AI to ignore severe visua
 
 Road data is heavily imbalanced. Despite this, the model achieved a highly robust harmonic mean (F1) of 0.62, surging past 0.73 mAP@0.5 for severe, structural D40 Potholes.
 
-👥 Team 14D (AI4ALL)
-
-Nebiyeleul Yifru - Technical Lead & ML Engineer
-
-Wesley Maube
-
-Ruvarashe Moyo
-
-Anthony Zheng
-
-Carter Braun
