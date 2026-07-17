@@ -1,4 +1,4 @@
-# AURA: Smart City Infrastructure AI
+🛣️ AURA: Smart City Infrastructure AI
 
 AURA (Automated Urban Road Assessment) is an automated deep learning pipeline and interactive web dashboard designed to process street-level dashcam imagery, dynamically flagging and mapping severe pavement distress. Built by Team 14D for the AI4ALL Ignite Program.
 
@@ -61,3 +61,15 @@ Our Negative Sampling strategy successfully taught the AI to ignore severe visua
 3. F1-Score & Precision-Recall
 
 Road data is heavily imbalanced. Despite this, the model achieved a highly robust harmonic mean (F1) of 0.62, surging past 0.73 mAP@0.5 for severe, structural D40 Potholes.
+
+👥 Team 14D (AI4ALL)
+
+Nebiyeleul Yifru - Technical Lead & ML Engineer
+
+Wesley Maube
+
+Ruvarashe Moyo
+
+Anthony Zheng
+
+Carter Braun
