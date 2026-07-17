@@ -28,8 +28,8 @@ Advanced Bias Mitigation: Trained using Negative Sampling (images of healthy roa
 
 Clone the repository:
 
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-cd YOUR_REPO_NAME
+git clone https://github.com/zheng-anthony/AURA.git
+cd AURA
 
 
 Install the required dependencies:
