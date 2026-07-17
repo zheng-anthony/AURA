@@ -7,7 +7,7 @@ from collections import Counter
 from ultralytics import YOLO
 
 # 1. PAGE CONFIGURATION
-st.set_page_config(page_title="PaveVision AI", page_icon="🛣️", layout="wide")
+st.set_page_config(page_title="AURA AI", page_icon="🛣️", layout="wide")
 
 st.markdown("""
     <style>
@@ -28,8 +28,8 @@ def load_model():
 model, model_loaded = load_model()
 
 # 3. DASHBOARD HEADER
-st.title("🛣️ PaveVision: Smart City Infrastructure AI")
-st.markdown("**Team 14D** | Automated Road Damage Flag System")
+st.title("🛣️ AURA: Smart City Infrastructure AI")
+st.markdown("**Team 14D** | Automated Urban Road Assessment System")
 st.divider()
 
 # 4. SIDEBAR CONTROLS
