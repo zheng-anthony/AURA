@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image, ExifTags
 from collections import Counter
+from pathlib import Path
 from ultralytics import YOLO
 
 # 1. PAGE CONFIGURATION
@@ -19,13 +20,15 @@ st.markdown("""
 # 2. LOAD THE AI BRAIN
 @st.cache_resource
 def load_model():
+    model_path = Path(__file__).resolve().parents[1] / "models" / "best.pt"
     try:
-        model = YOLO('best.pt')
-        return model, True
+        model = YOLO(str(model_path))
+        return model, None
     except Exception as e:
-        return None, False
+        return None, f"{type(e).__name__}: {e}"
 
-model, model_loaded = load_model()
+model, model_error = load_model()
+model_loaded = model is not None
 
 # 3. DASHBOARD HEADER
 st.title("🛣️ AURA: Smart City Infrastructure AI")
@@ -135,6 +138,6 @@ with col2:
                 st.success("✅ Scan Complete: No hazards detected. Pavement structure optimal.")
             
     elif not model_loaded:
-        st.error("❌ AI Model not found. Please ensure 'best.pt' is in the same directory as this script.")
+        st.error(f"❌ AI model failed to load: {model_error}")
     else:
         st.info("Awaiting dashcam image upload...")
