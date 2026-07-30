@@ -20,7 +20,7 @@ st.markdown("""
 # 2. LOAD THE AI BRAIN
 @st.cache_resource
 def load_model():
-    model_path = Path(__file__).resolve().parents[1] / "models" / "best.pt"
+    model_path = Path(__file__).resolve().parents[1] / "models" / "best1.pt"
     try:
         model = YOLO(str(model_path))
         return model, None
