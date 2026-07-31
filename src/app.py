@@ -37,8 +37,7 @@ st.divider()
 
 # 4. SIDEBAR CONTROLS
 st.sidebar.title("⚙️ System Controls")
-confidence_threshold = st.sidebar.slider("AI Confidence Threshold", 0.1, 1.0, 0.25, 
-                                         help="Lower this to catch faint cracks. Raise it to ignore shadows.")
+confidence_threshold = st.sidebar.slider("AI Confidence Threshold", 0.1, 1.0, 0.25,help="Lower this to catch faint cracks. Raise it to ignore shadows.")
 
 st.sidebar.markdown("### 📍 Location Metadata Fallback")
 st.sidebar.markdown("*If uploaded image lacks GPS metadata, the map will default to these coordinates:*")
