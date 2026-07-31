@@ -58,7 +58,7 @@ def get_exif_gps(image):
             decimal = float(val[0]) + float(val[1])/60.0 + float(val[2])/3600.0
             return -decimal if ref in ['S', 'W'] else decimal
             lat = to_decimal(value[2], value[1])
-            lon = to_decimal(value[4], value[3])
+            lon = to_decimal(value[4], value[3])
             return lat, lon
 return None
 except Exception:
