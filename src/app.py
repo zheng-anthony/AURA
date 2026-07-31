@@ -50,22 +50,20 @@ def get_exif_gps(image):
     exif = image._getexif()
     if not exif:
       return None
-        
         # PIL uses numerical tags for EXIF data. GPSInfo is tag 34853.
-        for tag, value in exif.items():
-            decoded = ExifTags.TAGS.get(tag, tag)
-            if decoded == "GPSInfo":
-                # Convert Degrees/Minutes/Seconds to Decimal
-                def to_decimal(val, ref):
-                    decimal = float(val[0]) + float(val[1])/60.0 + float(val[2])/3600.0
-                    return -decimal if ref in ['S', 'W'] else decimal
-                
-                lat = to_decimal(value[2], value[1])
-                lon = to_decimal(value[4], value[3])
-                return lat, lon
-        return None
-    except Exception:
-        return None
+      for tag, value in exif.items():
+        decoded = ExifTags.TAGS.get(tag, tag)
+        if decoded == "GPSInfo":
+          # Convert Degrees/Minutes/Seconds to Decimal
+          def to_decimal(val, ref):
+            decimal = float(val[0]) + float(val[1])/60.0 + float(val[2])/3600.0
+            return -decimal if ref in ['S', 'W'] else decimal
+            lat = to_decimal(value[2], value[1])
+            lon = to_decimal(value[4], value[3])
+            return lat, lon
+return None
+except Exception:
+return None
 
 # 5. MAIN WORKSPACE
 col1, col2 = st.columns([1, 2])
