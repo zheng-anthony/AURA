@@ -21,11 +21,11 @@ st.markdown("""
 @st.cache_resource
 def load_model():
   model_path = Path(__file__).resolve().parents[1] / "models" / "best.pt"
-    try:
-        model = YOLO(str(model_path))
-        return model, None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {e}"
+  try:
+    model = YOLO(str(model_path))
+    return model, None
+  except Exception as e:
+    return None, f"{type(e).__name__}: {e}"
 
 model, model_error = load_model()
 model_loaded = model is not None
