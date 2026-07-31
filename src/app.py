@@ -45,11 +45,11 @@ simulated_lat = st.sidebar.number_input("Fallback Latitude", value=38.8951, form
 simulated_lon = st.sidebar.number_input("Fallback Longitude", value=-77.0364, format="%.4f")
 
 def get_exif_gps(image):
-    """Digs into the hidden EXIF data of a JPG to extract physical GPS coordinates."""
-    try:
-        exif = image._getexif()
-        if not exif:
-            return None
+  """Digs into the hidden EXIF data of a JPG to extract physical GPS coordinates."""
+  try:
+    exif = image._getexif()
+    if not exif:
+      return None
         
         # PIL uses numerical tags for EXIF data. GPSInfo is tag 34853.
         for tag, value in exif.items():
