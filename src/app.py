@@ -50,8 +50,7 @@ def get_exif_gps(image):
     exif = image._getexif()
     if not exif:
       return None
-        # PIL uses numerical tags for EXIF data. GPSInfo is tag 34853.
-      for tag, value in exif.items():
+      for tag, value in exif.items():
         decoded = ExifTags.TAGS.get(tag, tag)
         if decoded == "GPSInfo":
           # Convert Degrees/Minutes/Seconds to Decimal
