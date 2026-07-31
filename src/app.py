@@ -6,6 +6,7 @@ from PIL import Image, ExifTags
 from collections import Counter
 from pathlib import Path
 from ultralytics import YOLO
+from huggingface_hub import hf_hub_download
 
 # 1. PAGE CONFIGURATION
 st.set_page_config(page_title="AURA AI", page_icon="🛣️", layout="wide")
@@ -20,9 +21,12 @@ st.markdown("""
 # 2. LOAD THE AI BRAIN
 @st.cache_resource
 def load_model():
-    model_path = Path(__file__).resolve().parents[1] / "models" / "best.pt"
     try:
-        model = YOLO(str(model_path))
+        # 🚀 PRO CTO MOVE: Automatically fetch weights from Hugging Face
+        # This safely downloads best.pt to a local cache and returns the exact path.
+        # It only downloads once! On future runs, it loads instantly from the cache.
+        model_path = hf_hub_download(repo_id="Nebiyu7/AURA", filename="best.pt")
+        model = YOLO(model_path)
         return model, None
     except Exception as e:
         return None, f"{type(e).__name__}: {e}"
@@ -138,6 +142,6 @@ with col2:
                 st.success("✅ Scan Complete: No hazards detected. Pavement structure optimal.")
             
     elif not model_loaded:
-        st.error(f"❌ AI model failed to load: {model_error}")
+        st.error("❌ AI Model not found. Please ensure 'best.pt' is in the same directory as this script.")
     else:
         st.info("Awaiting dashcam image upload...")
