@@ -38,16 +38,25 @@ except ModuleNotFoundError as exc:
 MAX_UPLOAD_SIZE_MB = 100
 
 
-st.set_page_config(page_title="AURA AI", page_icon="🛣️", layout="wide")
+st.set_page_config(
+    page_title="AURA AI",
+    page_icon="🛣️",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+    menu_items={
+        "About": (
+            "AURA is a road-hazard detection demo built by Team 14D for the "
+            "AI4ALL Ignite Program."
+        )
+    },
+)
 
-st.markdown(
-    """
-    <style>
-    .main { background-color: #0f172a; color: #f8fafc; }
-    .stMetric { background-color: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
-    </style>
-    """,
-    unsafe_allow_html=True,
+# Streamlit keeps its native sidebar toggle; this marks the collapsed control area
+# as Settings without relying on brittle internal CSS selectors.
+st.logo(
+    ":material/settings:",
+    size="medium",
+    icon_image=":material/settings:",
 )
 
 
@@ -62,10 +71,21 @@ def load_model():
 
 def describe_counts(counts: Counter[int] | dict[int, int]) -> str:
     descriptions = [
-        f"{count} **{CLASS_NAMES.get(class_id, 'Unknown')}** detection(s)"
+        f"{count} **{CLASS_NAMES.get(class_id, 'Unknown')}**"
         for class_id, count in sorted(counts.items())
     ]
-    return ", and ".join(descriptions)
+    if len(descriptions) < 2:
+        return "".join(descriptions)
+    if len(descriptions) == 2:
+        return " and ".join(descriptions)
+    return f"{', '.join(descriptions[:-1])}, and {descriptions[-1]}"
+
+
+def render_stat_cards(statistics: list[str], card_width: int) -> None:
+    statistic_row = st.container(horizontal=True, gap="small")
+    for statistic in statistics:
+        with statistic_row.container(border=True, width=card_width):
+            st.markdown(f"**{statistic}**")
 
 
 def render_location(
@@ -74,8 +94,6 @@ def render_location(
     fallback_longitude: float,
     media_label: str,
 ) -> None:
-    st.markdown("### 🗺️ Geospatial Hazard Mapping")
-
     if gps_coordinates is not None:
         latitude, longitude = gps_coordinates
         st.success(
@@ -93,13 +111,11 @@ def render_location(
     st.map(map_data, zoom=14, width="stretch")
 
 
-def render_image_analysis(
+def analyze_image(
     uploaded_file,
     model,
     confidence_threshold: float,
-    fallback_latitude: float,
-    fallback_longitude: float,
-) -> None:
+) -> dict | None:
     try:
         with Image.open(uploaded_file) as source_image:
             gps_coordinates = get_image_gps(source_image)
@@ -107,7 +123,7 @@ def render_image_analysis(
         frame_bgr = cv2.cvtColor(np.asarray(display_image), cv2.COLOR_RGB2BGR)
     except (OSError, UnidentifiedImageError, ValueError):
         st.error("❌ The uploaded image could not be read.")
-        return
+        return None
 
     try:
         with st.spinner("Neural network processing image..."):
@@ -118,30 +134,50 @@ def render_image_analysis(
             )
     except Exception as exc:
         st.error(f"❌ Image processing failed: {exc}")
-        return
+        return None
 
     annotated_rgb = cv2.cvtColor(annotated_bgr, cv2.COLOR_BGR2RGB)
-    st.image(annotated_rgb, caption="Processed Road Image", width="stretch")
+    return {
+        "annotated_rgb": annotated_rgb,
+        "class_counts": class_counts,
+        "gps_coordinates": gps_coordinates,
+    }
+
+
+def render_image_result(result: dict) -> None:
+    annotated_rgb = result["annotated_rgb"]
+    class_counts = result["class_counts"]
+
+    st.image(annotated_rgb, width="stretch")
 
     number_of_detections = sum(class_counts.values())
+    number_of_damage_types = len(class_counts)
+    detection_label = "detection" if number_of_detections == 1 else "detections"
+    damage_type_label = (
+        "damage type" if number_of_damage_types == 1 else "damage types"
+    )
+
+    render_stat_cards(
+        [
+            f"{number_of_detections:,} {detection_label}",
+            f"{number_of_damage_types:,} {damage_type_label}",
+        ],
+        card_width=220,
+    )
+
     if number_of_detections == 0:
-        st.success("✅ No detections at the current confidence threshold.")
+        with st.container(border=True):
+            st.markdown("✅ No road damage found at the current confidence threshold.")
         return
 
-    st.error(f"🚨 Detected {number_of_detections} road-hazard object(s).")
-    st.info(f"🗣️ **AI Analysis Report:** Identified {describe_counts(class_counts)}.")
-    render_location(
-        gps_coordinates,
-        fallback_latitude,
-        fallback_longitude,
-        "image",
-    )
+    with st.container(border=True):
+        st.markdown(
+            f"🗣️ **AI analysis:** Identified {describe_counts(class_counts)}."
+        )
 
 
 def render_video_result(
     result: dict,
-    fallback_latitude: float,
-    fallback_longitude: float,
 ) -> None:
     summary = result["summary"]
     output_bytes = result["output_bytes"]
@@ -155,73 +191,63 @@ def render_video_result(
         on_click="ignore",
         width="stretch",
     )
-    st.caption("The annotated H.264 export is silent; the original audio is omitted.")
+    st.caption("Silent H.264 export; original audio omitted.")
 
-    metric_columns = st.columns(3)
-    metric_columns[0].metric("Frames Analyzed", f"{summary.frames_processed:,}")
-    metric_columns[1].metric(
-        "Frames With Detections",
-        f"{summary.frames_with_detections:,}",
+    number_of_damage_types = len(summary.detection_events_by_class)
+    frame_label = "frame" if summary.frames_processed == 1 else "frames"
+    detected_frame_label = (
+        "frame" if summary.frames_with_detections == 1 else "frames"
     )
-    metric_columns[2].metric(
-        "Detection Events",
-        f"{summary.total_detection_events:,}",
+    event_label = (
+        "detection event"
+        if summary.total_detection_events == 1
+        else "detection events"
+    )
+    damage_type_label = (
+        "damage type" if number_of_damage_types == 1 else "damage types"
+    )
+
+    render_stat_cards(
+        [
+            f"{summary.frames_processed:,} {frame_label} analyzed",
+            (
+                f"{summary.frames_with_detections:,} {detected_frame_label} "
+                "with detections"
+            ),
+            f"{summary.total_detection_events:,} {event_label}",
+            f"{number_of_damage_types:,} {damage_type_label}",
+        ],
+        card_width=155,
     )
 
     if summary.total_detection_events == 0:
-        st.success("✅ No detections at the current confidence threshold.")
-        if result["gps_coordinates"] is not None:
-            latitude, longitude = result["gps_coordinates"]
-            st.caption(
-                "Recording GPS was found, but no hazard pin was created: "
-                f"{latitude:.4f}, {longitude:.4f}."
-            )
+        with st.container(border=True):
+            st.markdown("✅ No road damage found at the current confidence threshold.")
         return
 
-    st.error(
-        "🚨 Detections appeared in "
-        f"{summary.frames_with_detections:,} analyzed frame(s)."
-    )
-    st.info(
-        "🗣️ **Frame-Level Analysis Report:** Identified "
-        f"{describe_counts(summary.detection_events_by_class)}."
-    )
-    st.caption(
-        "Detection events are bounding boxes counted per frame; the same physical "
-        "road defect may appear in multiple frames."
-    )
-    render_location(
-        result["gps_coordinates"],
-        fallback_latitude,
-        fallback_longitude,
-        "video",
-    )
+    with st.container(border=True):
+        st.markdown(
+            "🗣️ **Frame-level analysis:** Identified "
+            f"{describe_counts(summary.detection_events_by_class)}."
+        )
+        st.caption(
+            "Detection events are bounding boxes counted per frame; the same physical "
+            "road defect may appear in multiple frames."
+        )
 
 
-def render_video_analysis(
+def analyze_video(
     uploaded_file,
     model,
     confidence_threshold: float,
-    fallback_latitude: float,
-    fallback_longitude: float,
-) -> None:
+) -> dict | None:
     uploaded_bytes = uploaded_file.getvalue()
     if len(uploaded_bytes) > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
         st.error(f"❌ Upload a video no larger than {MAX_UPLOAD_SIZE_MB} MB.")
-        return
+        return None
     if get_media_kind(uploaded_file.name) != "video":
         st.error("❌ Unsupported video type. Use MP4, MOV, or M4V.")
-        return
-
-    preview_format = getattr(uploaded_file, "type", None) or "video/mp4"
-    st.video(uploaded_bytes, format=preview_format)
-    st.caption(
-        f"Recorded-video demo: maximum {int(MAX_VIDEO_DURATION_SECONDS)} seconds. "
-        "Select Analyze Video to begin frame-by-frame inference."
-    )
-
-    if not st.button("Analyze Video", type="primary", width="stretch"):
-        return
+        return None
 
     progress_bar = st.progress(0.0, text="Preparing video...")
     preview = st.empty()
@@ -277,103 +303,192 @@ def render_video_analysis(
         progress_bar.empty()
         preview.empty()
         st.error(f"❌ {exc}")
-        return
+        return None
     except OSError as exc:
         progress_bar.empty()
         preview.empty()
         st.error(f"❌ Video file handling failed: {exc}")
-        return
+        return None
 
-    render_video_result(
-        result,
-        fallback_latitude,
-        fallback_longitude,
-    )
+    return result
 
 
 model, model_error = load_model()
 model_loaded = model is not None
 
-st.title("🛣️ AURA: Smart City Infrastructure AI")
-st.markdown("**Team 14D** | Automated Urban Road Assessment System")
-st.divider()
+with st.sidebar:
+    st.title("⚙️ Settings")
+    st.caption(
+        "This panel starts closed. Reopen it from the top-left control beside "
+        "the cog. On phones it opens over the app."
+    )
+    st.divider()
 
-st.sidebar.title("⚙️ System Controls")
-confidence_threshold = st.sidebar.slider(
-    "AI Confidence Threshold",
-    0.1,
-    1.0,
-    0.25,
-    help="Lower this to catch faint cracks. Raise it to ignore shadows.",
-)
-
-st.sidebar.markdown("### 📍 Location Metadata Fallback")
-st.sidebar.markdown(
-    "*Used when uploaded image/video metadata does not contain supported GPS data.*"
-)
-fallback_latitude = st.sidebar.number_input(
-    "Fallback Latitude",
-    value=38.8951,
-    format="%.4f",
-)
-fallback_longitude = st.sidebar.number_input(
-    "Fallback Longitude",
-    value=-77.0364,
-    format="%.4f",
-)
-
-input_column, output_column = st.columns([1, 2])
-
-with input_column:
-    st.markdown("### 📸 1. Road Footage")
-    media_mode = st.radio(
-        "Choose media type",
-        ("Image", "Video"),
-        horizontal=True,
+    st.subheader("Detection")
+    confidence_threshold = st.slider(
+        "Confidence threshold",
+        0.1,
+        1.0,
+        0.25,
+        help="Lower values catch fainter damage; higher values reduce false positives.",
+    )
+    st.caption(
+        f"Showing predictions at or above **{confidence_threshold:.0%}** confidence."
     )
 
-    if media_mode == "Image":
-        st.markdown("Upload a road image to scan for structural degradation.")
-        uploaded_file = st.file_uploader(
-            "Choose an image",
-            type=["jpg", "jpeg", "png"],
-            max_upload_size=MAX_UPLOAD_SIZE_MB,
-            key="image-upload",
+    with st.expander("Location fallback", icon=":material/location_on:"):
+        st.caption(
+            "Used only when the uploaded image or video has no supported GPS metadata."
         )
-    else:
-        st.markdown("Upload or record a short road video for frame-by-frame analysis.")
-        uploaded_file = st.file_uploader(
-            "Upload or record a video",
-            type="video",
-            max_upload_size=MAX_UPLOAD_SIZE_MB,
-            key="video-upload",
-            help=(
-                "Your phone's native picker may offer Record Video. The exact options "
-                "depend on the browser and operating system."
-            ),
+        fallback_latitude = st.number_input(
+            "Fallback latitude",
+            value=38.8951,
+            format="%.4f",
         )
-        st.caption("Supports MP4, MOV, and M4V; up to 30 seconds and 100 MB.")
+        fallback_longitude = st.number_input(
+            "Fallback longitude",
+            value=-77.0364,
+            format="%.4f",
+        )
 
-with output_column:
-    st.markdown("### 🖥️ 2. Inference Output")
-
-    if uploaded_file is None:
-        st.info(f"Awaiting a road {media_mode.lower()} upload...")
-    elif not model_loaded:
-        st.error(f"❌ AI model failed to load: {model_error}")
-    elif media_mode == "Image":
-        render_image_analysis(
-            uploaded_file,
-            model,
-            confidence_threshold,
-            fallback_latitude,
-            fallback_longitude,
-        )
+    st.divider()
+    if model_loaded:
+        st.success("YOLOv8s model ready", icon="✅")
     else:
-        render_video_analysis(
-            uploaded_file,
-            model,
-            confidence_threshold,
-            fallback_latitude,
-            fallback_longitude,
+        st.error("Model unavailable", icon="❌")
+    st.caption("Recorded-video limit: 30 seconds · 100 MB")
+
+page_shell = st.container(
+    horizontal=True,
+    horizontal_alignment="center",
+)
+page = page_shell.container(width=720)
+
+with page:
+    with st.container(border=True):
+        st.title("🛣️ AURA")
+        st.markdown("**Automated Urban Road Assessment** · Team 14D")
+        st.caption(
+            "Upload road footage, detect pavement damage, and map available GPS "
+            "metadata."
         )
+        with st.container(horizontal=True, gap="small"):
+            st.badge("YOLOv8s", icon=":material/neurology:", color="blue")
+            st.badge(
+                "Images + recorded video",
+                icon=":material/video_camera_back:",
+                color="violet",
+            )
+            st.badge("GPS metadata", icon=":material/location_on:", color="green")
+
+    with st.container(border=True):
+        st.subheader("1. Upload image or video")
+        media_mode = st.segmented_control(
+            "Media type",
+            ("Image", "Video"),
+            default="Image",
+            required=True,
+            format_func=lambda mode: "📷 Image" if mode == "Image" else "🎥 Video",
+            width="stretch",
+            key="media-mode",
+        )
+
+        if media_mode == "Image":
+            st.caption("Upload a road image for a single-frame inspection.")
+            uploaded_file = st.file_uploader(
+                "Choose an image",
+                type=["jpg", "jpeg", "png"],
+                max_upload_size=MAX_UPLOAD_SIZE_MB,
+                key="image-upload",
+            )
+            st.caption("JPG, JPEG, or PNG · maximum 100 MB")
+        else:
+            st.caption("Upload or record a short clip for frame-by-frame inspection.")
+            uploaded_file = st.file_uploader(
+                "Upload or record a video",
+                type="video",
+                max_upload_size=MAX_UPLOAD_SIZE_MB,
+                key="video-upload",
+                help=(
+                    "Your phone's native picker may offer Record Video. The exact "
+                    "options depend on the browser and operating system."
+                ),
+            )
+            st.caption("MP4, MOV, or M4V · maximum 30 seconds / 100 MB")
+
+    analyze_clicked = False
+    with st.container(border=True):
+        st.subheader("2. Review upload")
+
+        if uploaded_file is None:
+            st.info(f"Upload a road {media_mode.lower()} to preview it.", icon="📤")
+        else:
+            uploaded_bytes = uploaded_file.getvalue()
+            if media_mode == "Image":
+                st.image(
+                    uploaded_bytes,
+                    caption="Original road image",
+                    width="stretch",
+                )
+            else:
+                preview_format = getattr(uploaded_file, "type", None) or "video/mp4"
+                st.video(uploaded_bytes, format=preview_format)
+                st.caption(
+                    "Recorded-video demo: maximum "
+                    f"{int(MAX_VIDEO_DURATION_SECONDS)} seconds."
+                )
+
+            if not model_loaded:
+                st.error(f"AI model failed to load: {model_error}", icon="❌")
+
+            analyze_clicked = st.button(
+                f"Analyze {media_mode}",
+                type="primary",
+                width="stretch",
+                disabled=not model_loaded,
+            )
+
+    analysis_result = None
+    result_section_number = 3 if media_mode == "Image" else 4
+    location_section_number = result_section_number + 1
+
+    if analyze_clicked and media_mode == "Video":
+        with st.container(border=True):
+            st.subheader("3. Processing preview")
+            st.caption(
+                "Bounding boxes appear here while AURA analyzes every video frame."
+            )
+            analysis_result = analyze_video(
+                uploaded_file,
+                model,
+                confidence_threshold,
+            )
+
+    if analyze_clicked and media_mode == "Image":
+        with st.container(border=True):
+            st.subheader(
+                f"{result_section_number}. Annotated Image"
+            )
+            analysis_result = analyze_image(
+                uploaded_file,
+                model,
+                confidence_threshold,
+            )
+            if analysis_result is not None:
+                render_image_result(analysis_result)
+    elif analysis_result is not None:
+        with st.container(border=True):
+            st.subheader(
+                f"{result_section_number}. Annotated video + statistics"
+            )
+            render_video_result(analysis_result)
+
+    if analysis_result is not None:
+        with st.container(border=True):
+            st.subheader(f"{location_section_number}. Location & map")
+            render_location(
+                analysis_result["gps_coordinates"],
+                fallback_latitude,
+                fallback_longitude,
+                media_mode.lower(),
+            )

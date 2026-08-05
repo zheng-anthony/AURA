@@ -1,14 +1,14 @@
 # 🛣️ AURA: Smart City Infrastructure AI
 
-AURA (Automated Urban Road Assessment) is a deep-learning pipeline and Streamlit dashboard that analyzes uploaded street-level images and recorded videos for pavement distress. It was built by Team 14D for the AI4ALL Ignite Program.
+AURA (Automated Urban Road Assessment) is a deep-learning pipeline and Streamlit dashboard that analyzes uploaded street-level images and recorded videos for pavement distress.
 
 ## 🎯 Objective
 
-Road inspections are often slow, manual, and reactive. AURA demonstrates how computer vision can identify and map pavement damage so municipalities can prioritize maintenance work.
+Road inspections are often slow, manual, and reactive. AURA demonstrates how computer vision can identify and map pavement damage so cities can prioritize maintenance work.
 
 ## ✨ Key features
 
-- **Image and recorded-video detection:** A custom-trained YOLOv8s model detects four road-hazard classes in uploaded photos and recorded video frames:
+- **Image and recorded-video detection:** A custom-trained YOLOv8s model detects four road-hazard classes in uploaded photos and recorded videos:
   - D00: Longitudinal cracks
   - D10: Transverse cracks
   - D20: Alligator cracking
@@ -49,6 +49,8 @@ python -m streamlit run src/app.py
 ```
 
 Open the displayed local URL, upload a supported image or recorded video, and review the annotated detections and map. Original phone files are most likely to retain GPS metadata; messaging, social-media, and editing applications may strip it.
+
+Detection confidence and fallback coordinates live in the responsive **Settings** sidebar. It starts collapsed on every screen size and can be toggled from Streamlit's top-left sidebar control beside the cog icon.
 
 ## 📊 Model evaluation
 
