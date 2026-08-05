@@ -1,5 +1,6 @@
 streamlit>=1.60.0
 ultralytics
+lap>=0.5.12
 opencv-python
 imageio-ffmpeg==0.6.0
 pymediainfo==7.0.1

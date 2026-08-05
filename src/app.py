@@ -60,13 +60,23 @@ st.logo(
 )
 
 
-@st.cache_resource
-def load_model():
+def _load_model_instance():
     model_path = Path(__file__).resolve().parents[1] / "models" / "best.pt"
     try:
         return YOLO(str(model_path)), None
     except Exception as exc:
         return None, f"{type(exc).__name__}: {exc}"
+
+
+@st.cache_resource
+def load_model():
+    return _load_model_instance()
+
+
+def load_tracking_model():
+    """Create a tracker isolated to one video-analysis run."""
+
+    return _load_model_instance()
 
 
 def describe_counts(counts: Counter[int] | dict[int, int]) -> str:
@@ -193,15 +203,15 @@ def render_video_result(
     )
     st.caption("Silent H.264 export; original audio omitted.")
 
-    number_of_damage_types = len(summary.detection_events_by_class)
+    number_of_damage_types = len(summary.unique_tracks_by_class)
     frame_label = "frame" if summary.frames_processed == 1 else "frames"
     detected_frame_label = (
         "frame" if summary.frames_with_detections == 1 else "frames"
     )
-    event_label = (
-        "detection event"
-        if summary.total_detection_events == 1
-        else "detection events"
+    tracked_hazard_label = (
+        "unique tracked hazard"
+        if summary.total_unique_tracks == 1
+        else "unique tracked hazards"
     )
     damage_type_label = (
         "damage type" if number_of_damage_types == 1 else "damage types"
@@ -214,26 +224,41 @@ def render_video_result(
                 f"{summary.frames_with_detections:,} {detected_frame_label} "
                 "with detections"
             ),
-            f"{summary.total_detection_events:,} {event_label}",
+            f"{summary.total_unique_tracks:,} {tracked_hazard_label}",
             f"{number_of_damage_types:,} {damage_type_label}",
         ],
         card_width=155,
     )
 
-    if summary.total_detection_events == 0:
+    if summary.total_unique_tracks == 0:
         with st.container(border=True):
-            st.markdown("✅ No road damage found at the current confidence threshold.")
+            if summary.total_detection_events == 0:
+                st.markdown(
+                    "✅ No road damage found at the current confidence threshold."
+                )
+            else:
+                st.markdown(
+                    "⚠️ Frame-level detections were found, but no persistent tracker "
+                    "IDs were established."
+                )
         return
 
     with st.container(border=True):
         st.markdown(
-            "🗣️ **Frame-level analysis:** Identified "
-            f"{describe_counts(summary.detection_events_by_class)}."
+            "🗣️ **Tracked-hazard analysis:** Identified "
+            f"{describe_counts(summary.unique_tracks_by_class)}."
         )
         st.caption(
-            "Detection events are bounding boxes counted per frame; the same physical "
-            "road defect may appear in multiple frames."
+            "Estimated from distinct BoT-SORT IDs across "
+            f"{summary.total_detection_events:,} frame-level bounding boxes. "
+            "ID switches or missed associations can still overcount or undercount "
+            "physical defects."
         )
+        if summary.untracked_detection_events:
+            st.caption(
+                f"{summary.untracked_detection_events:,} bounding boxes without a "
+                "tracker ID were excluded from the unique count."
+            )
 
 
 def analyze_video(
@@ -456,19 +481,26 @@ with page:
         with st.container(border=True):
             st.subheader("3. Processing preview")
             st.caption(
-                "Bounding boxes appear here while AURA analyzes every video frame."
+                "Persistent BoT-SORT IDs appear here while AURA tracks hazards "
+                "across consecutive frames."
             )
-            analysis_result = analyze_video(
-                uploaded_file,
-                model,
-                confidence_threshold,
-            )
+            with st.spinner("Loading video tracker..."):
+                tracking_model, tracking_model_error = load_tracking_model()
+            if tracking_model is None:
+                st.error(
+                    f"Video tracker failed to load: {tracking_model_error}",
+                    icon="❌",
+                )
+            else:
+                analysis_result = analyze_video(
+                    uploaded_file,
+                    tracking_model,
+                    confidence_threshold,
+                )
 
     if analyze_clicked and media_mode == "Image":
         with st.container(border=True):
-            st.subheader(
-                f"{result_section_number}. Annotated Image"
-            )
+            st.subheader(f"{result_section_number}. Annotated Image")
             analysis_result = analyze_image(
                 uploaded_file,
                 model,
@@ -478,9 +510,7 @@ with page:
                 render_image_result(analysis_result)
     elif analysis_result is not None:
         with st.container(border=True):
-            st.subheader(
-                f"{result_section_number}. Annotated video + statistics"
-            )
+            st.subheader(f"{result_section_number}. Annotated video + statistics")
             render_video_result(analysis_result)
 
     if analysis_result is not None:

@@ -48,17 +48,20 @@ class VideoProcessingError(RuntimeError):
 
 @dataclass(frozen=True)
 class VideoSummary:
-    """Frame-level video inference statistics.
+    """Frame-level detection and approximate unique-track statistics.
 
-    Detection events are bounding boxes observed across frames. They are not
-    counts of unique physical hazards because the same object can appear in
-    multiple frames.
+    Detection events are bounding boxes observed across frames. Unique tracks
+    are persistent BoT-SORT IDs, each assigned to its most frequently observed
+    class. Tracker ID switches or missed associations can still overcount or
+    undercount physical hazards.
     """
 
     frames_processed: int
     frames_with_detections: int
     detection_events_by_class: dict[int, int]
     frames_by_class: dict[int, int]
+    unique_tracks_by_class: dict[int, int]
+    untracked_detection_events: int
     fps: float
     width: int
     height: int
@@ -69,6 +72,12 @@ class VideoSummary:
         """Return the total number of frame-level bounding-box detections."""
 
         return sum(self.detection_events_by_class.values())
+
+    @property
+    def total_unique_tracks(self) -> int:
+        """Return the number of distinct tracker IDs observed in the video."""
+
+        return sum(self.unique_tracks_by_class.values())
 
 
 def get_media_kind(filename: str | Path) -> Literal["image", "video"] | None:
@@ -204,11 +213,7 @@ def _validate_confidence(confidence: float) -> float:
     return confidence_value
 
 
-def infer_frame(
-    model: object, frame_bgr: np.ndarray, confidence: float
-) -> tuple[np.ndarray, Counter[int]]:
-    """Run inference on one BGR frame and return its BGR annotation and counts."""
-
+def _validate_frame(frame_bgr: np.ndarray) -> None:
     if (
         not isinstance(frame_bgr, np.ndarray)
         or frame_bgr.ndim != 3
@@ -216,6 +221,46 @@ def infer_frame(
     ):
         raise VideoProcessingError("Inference requires a three-channel BGR frame.")
 
+
+def _annotated_frame(result: object) -> np.ndarray:
+    annotated_bgr = result.plot()
+    if (
+        not isinstance(annotated_bgr, np.ndarray)
+        or annotated_bgr.ndim != 3
+        or annotated_bgr.shape[2] != 3
+        or annotated_bgr.dtype != np.uint8
+    ):
+        raise VideoProcessingError("The model returned an invalid annotated frame.")
+    return annotated_bgr
+
+
+def _integer_values(values: object | None, value_name: str) -> list[int]:
+    if values is None:
+        return []
+    if hasattr(values, "detach"):
+        values = values.detach()
+    if hasattr(values, "cpu"):
+        values = values.cpu()
+    if hasattr(values, "tolist"):
+        values = values.tolist()
+
+    integer_values = []
+    for value in np.asarray(values).reshape(-1).tolist():
+        numeric_value = float(value)
+        if not math.isfinite(numeric_value) or not numeric_value.is_integer():
+            raise VideoProcessingError(
+                f"The model returned an invalid {value_name}: {value!r}."
+            )
+        integer_values.append(int(numeric_value))
+    return integer_values
+
+
+def infer_frame(
+    model: object, frame_bgr: np.ndarray, confidence: float
+) -> tuple[np.ndarray, Counter[int]]:
+    """Run inference on one BGR frame and return its BGR annotation and counts."""
+
+    _validate_frame(frame_bgr)
     confidence_value = _validate_confidence(confidence)
     try:
         results = model.predict(source=frame_bgr, conf=confidence_value, verbose=False)
@@ -223,33 +268,94 @@ def infer_frame(
             raise VideoProcessingError("The model returned no inference result for a frame.")
 
         result = results[0]
-        annotated_bgr = result.plot()
-        if (
-            not isinstance(annotated_bgr, np.ndarray)
-            or annotated_bgr.ndim != 3
-            or annotated_bgr.shape[2] != 3
-            or annotated_bgr.dtype != np.uint8
-        ):
-            raise VideoProcessingError("The model returned an invalid annotated frame.")
-
+        annotated_bgr = _annotated_frame(result)
         boxes = getattr(result, "boxes", None)
         classes = getattr(boxes, "cls", None) if boxes is not None else None
-        if classes is None:
-            return annotated_bgr, Counter()
-
-        if hasattr(classes, "detach"):
-            classes = classes.detach()
-        if hasattr(classes, "cpu"):
-            classes = classes.cpu()
-        if hasattr(classes, "tolist"):
-            classes = classes.tolist()
-
-        flattened_classes = np.asarray(classes).reshape(-1).tolist()
-        return annotated_bgr, Counter(int(class_id) for class_id in flattened_classes)
+        return annotated_bgr, Counter(_integer_values(classes, "class ID"))
     except VideoProcessingError:
         raise
     except Exception as exc:
         raise VideoProcessingError(f"Model inference failed: {exc}") from exc
+
+
+def track_frame(
+    model: object, frame_bgr: np.ndarray, confidence: float
+) -> tuple[np.ndarray, Counter[int], list[tuple[int, int]]]:
+    """Track one consecutive video frame and return IDs paired with class IDs."""
+
+    _validate_frame(frame_bgr)
+    confidence_value = _validate_confidence(confidence)
+    try:
+        results = model.track(
+            source=frame_bgr,
+            conf=confidence_value,
+            persist=True,
+            tracker="botsort.yaml",
+            verbose=False,
+        )
+        if not results:
+            raise VideoProcessingError("The model returned no tracking result for a frame.")
+
+        result = results[0]
+        annotated_bgr = _annotated_frame(result)
+        boxes = getattr(result, "boxes", None)
+        classes = getattr(boxes, "cls", None) if boxes is not None else None
+        track_ids = getattr(boxes, "id", None) if boxes is not None else None
+        class_ids = _integer_values(classes, "class ID")
+        frame_counts = Counter(class_ids)
+
+        if track_ids is None:
+            return annotated_bgr, frame_counts, []
+
+        integer_track_ids = _integer_values(track_ids, "tracker ID")
+        if len(integer_track_ids) != len(class_ids):
+            raise VideoProcessingError(
+                "The tracker returned mismatched object IDs and classes."
+            )
+        assigned_track_ids = [
+            track_id for track_id in integer_track_ids if track_id >= 0
+        ]
+        if len(set(assigned_track_ids)) != len(assigned_track_ids):
+            raise VideoProcessingError(
+                "The tracker returned a duplicate object ID within one frame."
+            )
+
+        observations = [
+            (track_id, class_id)
+            for track_id, class_id in zip(integer_track_ids, class_ids)
+            if track_id >= 0
+        ]
+        return annotated_bgr, frame_counts, observations
+    except VideoProcessingError:
+        raise
+    except Exception as exc:
+        raise VideoProcessingError(f"Model tracking failed: {exc}") from exc
+
+
+def _reset_tracking_state(model: object) -> None:
+    """Reset persistent Ultralytics tracker IDs between unrelated videos."""
+
+    predictor = getattr(model, "predictor", None)
+    trackers = getattr(predictor, "trackers", ())
+    for tracker in trackers:
+        reset = getattr(tracker, "reset", None)
+        if callable(reset):
+            reset()
+
+
+def _unique_tracks_by_class(
+    track_class_votes: dict[int, Counter[int]],
+) -> Counter[int]:
+    unique_tracks: Counter[int] = Counter()
+    for class_votes in track_class_votes.values():
+        if not class_votes:
+            continue
+        dominant_class = min(
+            class_votes,
+            key=lambda class_id: (-class_votes[class_id], class_id),
+        )
+        unique_tracks[dominant_class] += 1
+    return unique_tracks
 
 
 def _valid_video_fps(capture: cv2.VideoCapture) -> float:
@@ -350,6 +456,8 @@ def process_video(
     frames_with_detections = 0
     detection_events: Counter[int] = Counter()
     frames_by_class: Counter[int] = Counter()
+    track_class_votes: dict[int, Counter[int]] = {}
+    untracked_detection_events = 0
     encoded_width = 0
     encoded_height = 0
     max_frames = max(1, math.floor(duration_limit * fps + 1e-9))
@@ -359,6 +467,7 @@ def process_video(
 
     try:
         try:
+            _reset_tracking_state(model)
             while True:
                 decoded, frame_bgr = capture.read()
                 if not decoded:
@@ -368,7 +477,7 @@ def process_video(
                         f"Video exceeds the {duration_limit:g}-second duration limit."
                     )
 
-                annotated_bgr, frame_counts = infer_frame(
+                annotated_bgr, frame_counts, track_observations = track_frame(
                     model, frame_bgr, confidence_value
                 )
                 encoded_frame = _pad_to_even_dimensions(annotated_bgr)
@@ -397,6 +506,12 @@ def process_video(
                 frames_processed += 1
                 last_annotated_bgr = annotated_bgr
                 detection_events.update(frame_counts)
+                untracked_detection_events += max(
+                    sum(frame_counts.values()) - len(track_observations),
+                    0,
+                )
+                for track_id, class_id in track_observations:
+                    track_class_votes.setdefault(track_id, Counter())[class_id] += 1
                 if frame_counts:
                     frames_with_detections += 1
                     frames_by_class.update(frame_counts.keys())
@@ -430,11 +545,14 @@ def process_video(
             raise VideoProcessingError("FFmpeg did not produce an annotated video.")
 
         os.replace(temporary_output_path, destination_path)
+        unique_tracks = _unique_tracks_by_class(track_class_votes)
         return VideoSummary(
             frames_processed=frames_processed,
             frames_with_detections=frames_with_detections,
             detection_events_by_class=dict(sorted(detection_events.items())),
             frames_by_class=dict(sorted(frames_by_class.items())),
+            unique_tracks_by_class=dict(sorted(unique_tracks.items())),
+            untracked_detection_events=untracked_detection_events,
             fps=fps,
             width=encoded_width,
             height=encoded_height,
@@ -445,6 +563,10 @@ def process_video(
     except Exception as exc:
         raise VideoProcessingError(f"Video processing failed: {exc}") from exc
     finally:
+        try:
+            _reset_tracking_state(model)
+        except Exception:
+            pass
         try:
             temporary_output_path.unlink(missing_ok=True)
         except OSError:

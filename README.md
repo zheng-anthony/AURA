@@ -14,6 +14,7 @@ Road inspections are often slow, manual, and reactive. AURA demonstrates how com
   - D20: Alligator cracking
   - D40: Potholes
 - **Geospatial mapping:** AURA reads GPS EXIF data from supported images and one recording-level GPS location from supported video metadata. If metadata is absent or was removed during sharing, the dashboard uses the latitude and longitude entered in the sidebar.
+- **Tracked video summaries:** Video frames use persistent BoT-SORT IDs to reduce repeated counts of the same visible hazard.
 - **Analysis reports:** Model predictions are converted into readable hazard summaries.
 - **Bias mitigation:** Training incorporated negative samples such as healthy roads, shadows, and tar lines, plus synthetic weather augmentation with Albumentations.
 
@@ -23,7 +24,7 @@ Road inspections are often slow, manual, and reactive. AURA demonstrates how com
 - Recorded videos: MP4, MOV, and M4V
 - Video limits: 30 seconds and 100 MB per upload
 
-Video detection totals are **frame-level counts**, not counts of unique physical hazards. The same pothole or crack may therefore be counted in multiple frames. Annotated output videos are generated without an audio track.
+Video hazard totals count distinct BoT-SORT track IDs across consecutive frames. This reduces repeated counts, but it remains an estimate: tracker ID switches and missed associations can overcount or undercount physical defects. Annotated output videos are generated without an audio track.
 
 On some phones, the upload control may offer **Record Video** or a camera option through the device's native file picker. This behavior depends on the phone, browser, and permissions; AURA does not provide continuous live-camera streaming. A recorded clip must finish before it can be uploaded and analyzed.
 
