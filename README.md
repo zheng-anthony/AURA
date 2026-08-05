@@ -1,64 +1,59 @@
-🛣️ AURA: Smart City Infrastructure AI
+# 🛣️ AURA: Smart City Infrastructure AI
 
-AURA (Automated Urban Road Assessment) is an automated deep learning pipeline and interactive web dashboard designed to process street-level dashcam imagery, dynamically flagging and mapping severe pavement distress. Built by Team 14D for the AI4ALL Ignite Program.
+AURA (Automated Urban Road Assessment) is a deep-learning pipeline and Streamlit dashboard that analyzes uploaded street-level images and recorded videos for pavement distress. It was built by Team 14D for the AI4ALL Ignite Program.
 
-🎯 The Objective
+## 🎯 Objective
 
-Current civil maintenance frameworks rely on slow, manual, and reactive inspections. AURA transitions this to a proactive, data-driven workflow. By detecting and classifying structural failures (like potholes and alligator cracking) in real-time, municipalities can optimize repair budgets and navigation apps can reroute commuters around dangerous hazards.
+Road inspections are often slow, manual, and reactive. AURA demonstrates how computer vision can identify and map pavement damage so municipalities can prioritize maintenance work.
 
-✨ Key Features
+## ✨ Key features
 
-Real-Time Object Detection: Utilizes a custom-trained YOLOv8s Convolutional Neural Network to classify 4 specific road hazards:
+- **Image and recorded-video detection:** A custom-trained YOLOv8s model detects four road-hazard classes in uploaded photos and recorded video frames:
+  - D00: Longitudinal cracks
+  - D10: Transverse cracks
+  - D20: Alligator cracking
+  - D40: Potholes
+- **Geospatial mapping:** AURA reads GPS EXIF data from supported images and one recording-level GPS location from supported video metadata. If metadata is absent or was removed during sharing, the dashboard uses the latitude and longitude entered in the sidebar.
+- **Analysis reports:** Model predictions are converted into readable hazard summaries.
+- **Bias mitigation:** Training incorporated negative samples such as healthy roads, shadows, and tar lines, plus synthetic weather augmentation with Albumentations.
 
-D00: Longitudinal Cracks
+## 📤 Supported uploads
 
-D10: Transverse Cracks
+- Images: JPG, JPEG, and PNG
+- Recorded videos: MP4, MOV, and M4V
+- Video limits: 30 seconds and 100 MB per upload
 
-D20: Alligator Cracking
+Video detection totals are **frame-level counts**, not counts of unique physical hazards. The same pothole or crack may therefore be counted in multiple frames. Annotated output videos are generated without an audio track.
 
-D40: Potholes
+On some phones, the upload control may offer **Record Video** or a camera option through the device's native file picker. This behavior depends on the phone, browser, and permissions; AURA does not provide continuous live-camera streaming. A recorded clip must finish before it can be uploaded and analyzed.
 
-Geospatial EXIF Mapping: The Python backend automatically extracts hidden GPSInfo metadata from uploaded smartphone images, instantly dropping a maintenance pin on an interactive map.
-
-Dynamic Analysis Reports: Translates raw YOLO tensor outputs into human-readable maintenance summaries.
-
-Advanced Bias Mitigation: Trained using Negative Sampling (images of healthy roads, shadows, and tar lines) and Synthetic Weather Augmentation (Albumentations) to drastically reduce false positives.
-
-🚀 How to Run Locally
+## 🚀 Run locally
 
 Clone the repository:
 
+```bash
 git clone https://github.com/zheng-anthony/AURA.git
 cd AURA
+```
 
+Install the dependencies:
 
-Install the required dependencies:
+```bash
+python -m pip install -r requirements.txt
+```
 
-pip install ultralytics opencv-python streamlit pandas pillow
+Start the dashboard:
 
+```bash
+python -m streamlit run src/app.py
+```
 
-Run the Streamlit Dashboard:
+Open the displayed local URL, upload a supported image or recorded video, and review the annotated detections and map. Original phone files are most likely to retain GPS metadata; messaging, social-media, and editing applications may strip it.
 
-streamlit run ai4all_dashboard.py
+## 📊 Model evaluation
 
+The model was trained for 50 epochs using a merged dataset of RDD2022 and high-resolution street-level pothole imagery.
 
-Upload a photo of a pothole (preferably taken on a smartphone with location services enabled) to see the AI inference and map marker in action!
-
-📊 Model Evaluation & Metrics
-
-Our model was rigorously trained for 50 Epochs using a merged dataset of RDD2022 and high-resolution street-level pothole imagery. Below are the finalized validation metrics proving the efficacy of our bias mitigation strategy.
-
-1. Training Results & Loss Curves
-
-Notice the steep decline in train/cls_loss and the lock-in of generalizable weights during the final "Mosaic Close" phase (Epochs 40-50).
-
-
-2. Confusion Matrix (Error Analysis)
-
-Our Negative Sampling strategy successfully taught the AI to ignore severe visual noise (shadows/manholes) in the "Background" class, while achieving near-perfect separation between Potholes (D40) and Transverse Cracks (D10).
-
-
-3. F1-Score & Precision-Recall
-
-Road data is heavily imbalanced. Despite this, the model achieved a highly robust harmonic mean (F1) of 0.62, surging past 0.73 mAP@0.5 for severe, structural D40 Potholes.
-
+1. **Training results and loss curves:** Training classification loss declined sharply before the final mosaic-close phase in epochs 40–50.
+2. **Confusion matrix:** Negative sampling helped the model distinguish road damage from background features such as shadows and manholes.
+3. **F1-score and precision-recall:** The model achieved an F1 score of 0.62 and more than 0.73 mAP@0.5 for D40 potholes.
