@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="AURA uses computer vision to detect, track, and map pavement damage from street-level images and recorded video."
+    />
+    <meta name="theme-color" content="#0b1714" />
+
+    <meta property="og:title" content="AURA — Automated Urban Road Assessment" />
+    <meta
+      property="og:description"
+      content="A smart-city AI prototype that turns road footage into clearer infrastructure insight."
+    />
+    <meta property="og:type" content="website" />
+
+    <title>AURA — Automated Urban Road Assessment</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="site-header">
+      <nav class="nav shell" aria-label="Primary navigation">
+        <a class="brand" href="#top" aria-label="AURA home">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span>
+          </span>
+          <span>AURA</span>
+        </a>
+
+        <div class="nav-links">
+          <a href="#overview">Overview</a>
+          <a href="#capabilities">Capabilities</a>
+          <a href="#process">How it works</a>
+        </div>
+
+        <a
+          class="button button--small button--ghost"
+          href="https://github.com/zheng-anthony/AURA"
+          target="_blank"
+          rel="noreferrer"
+        >
+          View GitHub
+          <span aria-hidden="true">↗</span>
+        </a>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <section class="hero shell" id="top">
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span> Smart city infrastructure AI</p>
+          <h1>Road insight,<br /><em>brought into focus.</em></h1>
+          <p class="hero-description">
+            AURA—Automated Urban Road Assessment—is a deep-learning prototype
+            that detects pavement damage in street-level images and recorded
+            video, then connects each result to useful location context.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button--primary" href="#overview">
+              Explore AURA <span aria-hidden="true">↓</span>
+            </a>
+            <a
+              class="text-link"
+              href="https://github.com/zheng-anthony/AURA"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Browse the repository <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <ul class="hero-tags" aria-label="Project technologies">
+            <li>YOLOv8s</li>
+            <li>Image + video</li>
+            <li>GPS-aware</li>
+          </ul>
+        </div>
+
+        <div
+          class="hero-visual"
+          role="img"
+          aria-label="Illustration of an AURA road analysis"
+        >
+          <div class="visual-glow" aria-hidden="true"></div>
+          <div class="analysis-window">
+            <div class="window-bar">
+              <div class="window-title">
+                <span class="status-dot"></span>
+                Analysis preview
+              </div>
+              <span class="window-mode">IMAGE</span>
+            </div>
+
+            <div class="road-scene" aria-hidden="true">
+              <div class="sky-haze"></div>
+              <div class="horizon horizon--left"></div>
+              <div class="horizon horizon--right"></div>
+              <div class="road"></div>
+              <div class="lane lane--one"></div>
+              <div class="lane lane--two"></div>
+              <div class="road-mark road-mark--one"></div>
+              <div class="road-mark road-mark--two"></div>
+
+              <div class="detection detection--crack">
+                <span>Alligator crack&nbsp; 84%</span>
+              </div>
+              <div class="detection detection--pothole">
+                <span>Pothole&nbsp; 91%</span>
+              </div>
+            </div>
+
+            <div class="window-footer">
+              <div>
+                <span class="footer-label">AI summary</span>
+                <strong>2 hazards identified</strong>
+              </div>
+              <div class="location-chip">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 21s6-5.15 6-11a6 6 0 1 0-12 0c0 5.85 6 11 6 11Z" />
+                  <circle cx="12" cy="10" r="2" />
+                </svg>
+                GPS found
+              </div>
+            </div>
+          </div>
+
+          <div class="floating-card floating-card--top" aria-hidden="true">
+            <span class="floating-icon">◎</span>
+            <span><strong>4</strong> hazard classes</span>
+          </div>
+          <div class="floating-card floating-card--bottom" aria-hidden="true">
+            <span class="signal-bars"><i></i><i></i><i></i></span>
+            <span><strong>Ready</strong> for review</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="statement" id="overview">
+        <div class="shell statement-grid">
+          <p class="section-index">01 / The idea</p>
+          <div>
+            <h2>Give road teams a clearer place to start.</h2>
+            <p>
+              Road inspections can be slow, manual, and reactive. AURA explores
+              how computer vision can surface visible pavement distress from
+              everyday road footage, helping cities understand where closer
+              inspection may be needed.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="capabilities section shell" id="capabilities">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow"><span></span> Core capabilities</p>
+            <h2>One pipeline.<br />Three useful views.</h2>
+          </div>
+          <p>
+            From the first upload to the final summary, AURA keeps the workflow
+            focused on clear, reviewable information.
+          </p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card feature-card--accent">
+            <div class="feature-number">01</div>
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32">
+                <path d="M4 10V5h5M23 5h5v5M28 22v5h-5M9 27H4v-5" />
+                <path d="m9 20 4-8 4 6 3-4 3 6H9Z" />
+              </svg>
+            </div>
+            <h3>Detect damage</h3>
+            <p>
+              A custom-trained YOLOv8s model marks visible cracks and potholes
+              in uploaded photos and recorded clips.
+            </p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-number">02</div>
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32">
+                <path d="M16 28s9-7.41 9-16a9 9 0 1 0-18 0c0 8.59 9 16 9 16Z" />
+                <circle cx="16" cy="12" r="3" />
+              </svg>
+            </div>
+            <h3>Map the context</h3>
+            <p>
+              When supported GPS metadata is available, AURA places the
+              analyzed media on a map for useful location context.
+            </p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-number">03</div>
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32">
+                <path d="M6 9h20v16H6z" />
+                <path d="m13 13 7 4-7 4v-8Z" />
+                <path d="M10 5h12" />
+              </svg>
+            </div>
+            <h3>Track through video</h3>
+            <p>
+              Persistent BoT-SORT IDs help reduce repeated counts as the same
+              road hazard appears across consecutive frames.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="hazards" aria-labelledby="hazards-title">
+        <div class="shell hazards-inner">
+          <div>
+            <p class="section-index section-index--light">Built to recognize</p>
+            <h2 id="hazards-title">Four forms of pavement distress.</h2>
+          </div>
+          <div class="hazard-list">
+            <div><span>D00</span> Longitudinal cracks</div>
+            <div><span>D10</span> Transverse cracks</div>
+            <div><span>D20</span> Alligator cracking</div>
+            <div><span>D40</span> Potholes</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="process section shell" id="process">
+        <div class="section-heading process-heading">
+          <div>
+            <p class="eyebrow"><span></span> The workflow</p>
+            <h2>From upload<br />to insight.</h2>
+          </div>
+          <p>
+            A straightforward demonstration designed to make model output easy
+            to inspect and understand.
+          </p>
+        </div>
+
+        <ol class="process-list">
+          <li>
+            <span class="process-number">01</span>
+            <div>
+              <h3>Upload</h3>
+              <p>Add a road image or a short recorded video to the dashboard.</p>
+            </div>
+            <span class="process-arrow" aria-hidden="true">→</span>
+          </li>
+          <li>
+            <span class="process-number">02</span>
+            <div>
+              <h3>Analyze</h3>
+              <p>AURA detects pavement distress and reads available location data.</p>
+            </div>
+            <span class="process-arrow" aria-hidden="true">→</span>
+          </li>
+          <li>
+            <span class="process-number">03</span>
+            <div>
+              <h3>Review</h3>
+              <p>Inspect annotated media, a readable summary, and mapped context.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="cta-section shell">
+        <div class="cta-card">
+          <div class="cta-orbit" aria-hidden="true">
+            <span></span>
+          </div>
+          <p class="eyebrow eyebrow--light"><span></span> Explore the prototype</p>
+          <h2>Better roads begin with<br />better visibility.</h2>
+          <p>
+            Dig into the model, dashboard, and training work behind AURA.
+          </p>
+          <a
+            class="button button--light"
+            href="https://github.com/zheng-anthony/AURA"
+            target="_blank"
+            rel="noreferrer"
+          >
+            View project on GitHub <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <div>
+          <a class="brand brand--footer" href="#top">
+            <span class="brand-mark" aria-hidden="true"><span></span></span>
+            <span>AURA</span>
+          </a>
+          <p>Automated Urban Road Assessment</p>
+        </div>
+        <p>Team 14D · AI4ALL Ignite Program</p>
+      </div>
+    </footer>
+  </body>
+</html>
