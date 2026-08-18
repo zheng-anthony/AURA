@@ -1,7 +1,6 @@
 from collections import Counter
 from pathlib import Path
 import tempfile
-
 import cv2
 import numpy as np
 import pandas as pd
