@@ -1,7 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
 streamlit>=1.60.0
 ultralytics
 lap>=0.5.12
-opencv-python-headless
 imageio-ffmpeg==0.6.0
 pymediainfo==7.0.1
 numpy
@@ -11,3 +13,11 @@ albumentations
 matplotlib
 kaggle
 huggingface_hub
+```eof
+
+**What to do next:**
+1. Commit this new `requirements.txt` to GitHub.
+2. Text your teammate and say: *"I just pushed a fix for the memory overload and C++ collision. Can you open your Streamlit dashboard, click 'Manage App' in the bottom right, and click 'Reboot App'?"*
+3. Make sure your teammate actually placed the `best.pt` file inside a folder named `models` (so the path is `models/best.pt`), because looking at their code, that is where the app is searching for it!
+
+By forcing the tiny CPU version of PyTorch and removing the OpenCV conflict, this should stop the server from crashing. Let me know what your teammate says!
