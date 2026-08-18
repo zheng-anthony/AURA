@@ -1,1 +1,17 @@
 libgl1
+libglib2.0-0
+```eof
+
+**2. Recreate the `.streamlit/config.toml` file**
+To make sure the app loads in dark mode and to fix that "TomlDecodeError" from your logs, create a folder named `.streamlit`, and inside it, create a file named `config.toml`. Paste this exact text into it:
+```toml:.streamlit/config.toml
+[theme]
+base="dark"
+primaryColor="#3b82f6"
+backgroundColor="#0f172a"
+secondaryBackgroundColor="#1e293b"
+textColor="#f8fafc"
+font="sans serif"
+```eof
+
+Once you commit those two files to GitHub, Streamlit will automatically reboot, install the missing `libgl1` package for OpenCV, and your AURA dashboard will successfully launch!
